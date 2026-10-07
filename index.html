@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Flotta e Scadenze Veicoli</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e293b">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --border: #334155;
+            --accent: #10b981;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            width: 100%;
+            overflow-x: auto;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
+        }
+        /* Regola ferrea: tutti i campi input, select e date avranno esattamente la stessa altezza e struttura */
+        input, select, input[type="date"] {
+            width: 100%;
+            height: 42px;
+            padding: 0 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background-color: #0f172a;
+            color: var(--text-color);
+            font-size: 1rem;
+            line-height: 42px;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        button {
+            width: 100%;
+            height: 42px;
+            border-radius: 4px;
+            border: none;
+            background-color: var(--primary);
+            color: var(--text-color);
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+        .search-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        @media (min-width: 768px) {
+            .search-box {
+                flex-direction: row;
+            }
+            .search-box input, .search-box select {
+                flex: 1;
+                height: 42px;
+            }
+        }
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 8px;
+            text-align: left;
+            white-space: nowrap;
+        }
+        th {
+            background-color: #334155;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn-export {
+            background-color: var(--accent);
+        }
+        footer {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 30px;
+            padding: 10px 0;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gestione Parco Veicoli</h1>
+        
+        <!-- Sezione Anagrafica e Scadenze Veicolo -->
+        <div class="card">
+            <h2>Anagrafica e Scadenze Mezzo</h2>
+            <form id="vehicleForm">
+                <div class="form-group">
+                    <label for="plate">Targa</label>
+                    <input type="text" id="plate" placeholder="es. AB123CD" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="vehicleType">Tipologia Mezzo</label>
+                    <select id="vehicleType" required onchange="updateTagliandoKm()">
+                        <option value="Utilitaria / Berlina">Utilitaria / Berlina (Tagliando 20.000 km)</option>
+                        <option value="Veicolo Commerciale Leggero">Veicolo Commerciale Leggero (Tagliando 15.000 km)</option>
+                        <option value="Heavy Duty / Full Cargo">Heavy Duty / Full Cargo (Tagliando 30.000 km)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="center">Centro di Appartenenza</label>
+                    <input type="text" id="center" placeholder="es. Hub Logistico Livorno / Centro Nord" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="ownership">Proprietà</label>
+                    <select id="ownership">
+                        <option value="Proprietà Aziendale">Proprietà Aziendale</option>
+                        <option value="Noleggio a Lungo Termine">Noleggio a Lungo Termine</option>
+                        <option value="Leasing">Leasing</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="currentKm">Chilometraggio Attuale (km)</label>
+                    <input type="number" id="currentKm" placeholder="es. 45000" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tagliandoKmTarget">Km Scadenza Tagliando (Preimpostato)</label>
+                    <input type="number" id="tagliandoKmTarget" placeholder="Km previsti per il tagliando" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tireSet">Treno Gomme Montato</label>
+                    <select id="tireSet">
+                        <option value="Estive">Estive</option>
+                        <option value="Invernali">Invernali</option>
+                        <option value="4 Stagioni">4 Stagioni</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="revisionDate">Scadenza Revisione</label>
+                    <input type="date" id="revisionDate" required>
+                </div>
+
+                <button type="submit">Registra / Aggiorna Veicolo</button>
+            </form>
+        </div>
+
+        <!-- Sezione Manutenzione e Interventi -->
+        <div class="card">
+            <h2>Registra Intervento Manutenzione</h2>
+            <form id="maintenanceForm">
+                <div class="form-group">
+                    <label for="maintPlate">Targa Veicolo</label>
+                    <input type="text" id="maintPlate" placeholder="Inserisci targa esatta" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="maintType">Tipo Intervento</label>
+                    <select id="maintType">
+                        <option value="Tagliando Ordinario">Tagliando Ordinario</option>
+                        <option value="Cambio Gomme">Cambio Gomme</option>
+                        <option value="Revisione">Revisione</option>
+                        <option value="Manutenzione Straordinaria / Guasto">Manutenzione Straordinaria / Guasto</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="maintNotes">Dettagli / Note intervento</label>
+                    <input type="text" id="maintNotes" placeholder="es. Sostituzione pastiglie freni e filtri">
+                </div>
+
+                <button type="submit">Registra Manutenzione</button>
+            </form>
+        </div>
+
+        <!-- Archivio e Filtri -->
+        <div class="card">
+            <h2>Archivio Flotta e Filtri</h2>
+            
+            <div class="search-box">
+                <input type="text" id="searchPlate" placeholder="Cerca per targa..." onkeyup="filterTables()">
+                <select id="filterType" onchange="filterTables()">
+                    <option value="">Tutte le tipologie</option>
+                    <option value="Utilitaria / Berlina">Utilitaria / Berlina</option>
+                    <option value="Veicolo Commerciale Leggero">Veicolo Commerciale Leggero</option>
+                    <option value="Heavy Duty / Full Cargo">Heavy Duty / Full Cargo</option>
+                </select>
+                <input type="text" id="filterCenter" placeholder="Filtra per centro..." onkeyup="filterTables()">
+            </div>
+
+            <div class="actions">
+                <button class="btn-export" onclick="exportToCSV()">Esporta in Excel (CSV)</button>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="vehicleTable">
+                    <thead>
+                        <tr>
+                            <th>Targa</th>
+                            <th>Tipologia</th>
+                            <th>Centro Appartenenza</th>
+                            <th>Proprietà</th>
+                            <th>Km Attuali</th>
+                            <th>Target Tagliando (Km)</th>
+                            <th>Gomme</th>
+                            <th>Scad. Revisione</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dati dinamici -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Log Storico Manutenzioni</h2>
+            <div class="table-responsive">
+                <table id="maintenanceTable">
+                    <thead>
+                        <tr>
+                            <th>Targa</th>
+                            <th>Intervento</th>
+                            <th>Note</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dati dinamici manutenzione -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <footer>
+            creato da Leonardo Cecchi
+        </footer>
+    </div>
+
+    <script>
+        function updateTagliandoKm() {
+            const type = document.getElementById('vehicleType').value;
+            const targetInput = document.getElementById('tagliandoKmTarget');
+            const currentKm = parseInt(document.getElementById('currentKm').value) || 0;
+
+            let step = 20000;
+            if (type.includes('Commerciale')) step = 15000;
+            if (type.includes('Heavy')) step = 30000;
+
+            targetInput.value = currentKm + step;
+        }
+
+        document.getElementById('currentKm').addEventListener('input', function() {
+            updateTagliandoKm();
+        });
+
+        document.getElementById('vehicleForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const plate = document.getElementById('plate').value.toUpperCase();
+            const vehicleType = document.getElementById('vehicleType').value;
+            const center = document.getElementById('center').value;
+            const ownership = document.getElementById('ownership').value;
+            const currentKm = document.getElementById('currentKm').value;
+            const tagliandoKmTarget = document.getElementById('tagliandoKmTarget').value;
+            const tireSet = document.getElementById('tireSet').value;
+            const revisionDate = document.getElementById('revisionDate').value;
+            const date = new Date().toLocaleDateString();
+
+            const record = { plate, vehicleType, center, ownership, currentKm, tagliandoKmTarget, tireSet, revisionDate, date };
+            
+            let vehicles = JSON.parse(localStorage.getItem('fleet_vehicles')) || [];
+            vehicles = vehicles.filter(v => v.plate !== plate);
+            vehicles.push(record);
+            
+            localStorage.setItem('fleet_vehicles', JSON.stringify(vehicles));
+
+            loadTables();
+            this.reset();
+            updateTagliandoKm();
+        });
+
+        document.getElementById('maintenanceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const maintPlate = document.getElementById('maintPlate').value.toUpperCase();
+            const maintType = document.getElementById('maintType').value;
+            const maintNotes = document.getElementById('maintNotes').value;
+            const date = new Date().toLocaleDateString();
+
+            const maintRecord = { maintPlate, maintType, maintNotes, date };
+
+            let maints = JSON.parse(localStorage.getItem('fleet_maintenance')) || [];
+            maints.push(maintRecord);
+            localStorage.setItem('fleet_maintenance', JSON.stringify(maints));
+
+            loadTables();
+            this.reset();
+        });
+
+        function loadTables() {
+            filterTables();
+
+            const mTbody = document.querySelector('#maintenanceTable tbody');
+            mTbody.innerHTML = '';
+            let maints = JSON.parse(localStorage.getItem('fleet_maintenance')) || [];
+
+            maints.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td><b>${m.maintPlate}</b></td><td>${m.maintType}</td><td>${m.maintNotes}</td><td>${m.date}</td>`;
+                mTbody.appendChild(tr);
+            });
+        }
+
+        function filterTables() {
+            const searchPlate = document.getElementById('searchPlate').value.toUpperCase();
+            const filterType = document.getElementById('filterType').value;
+            const filterCenter = document.getElementById('filterCenter').value.toUpperCase();
+
+            const vTbody = document.querySelector('#vehicleTable tbody');
+            vTbody.innerHTML = '';
+            let vehicles = JSON.parse(localStorage.getItem('fleet_vehicles')) || [];
+
+            const filtered = vehicles.filter(v => {
+                const matchPlate = v.plate.includes(searchPlate);
+                const matchType = filterType === "" || v.vehicleType === filterType;
+                const matchCenter = v.center.toUpperCase().includes(filterCenter);
+                return matchPlate && matchType && matchCenter;
+            });
+
+            filtered.forEach(v => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td><b>${v.plate}</b></td><td>${v.vehicleType}</td><td>${v.center}</td><td>${v.ownership}</td><td>${v.currentKm} km</td><td>${v.tagliandoKmTarget} km</td><td>${v.tireSet}</td><td>${v.revisionDate}</td>`;
+                vTbody.appendChild(tr);
+            });
+        }
+
+        updateTagliandoKm();
+        loadTables();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log("Service Worker registrato."))
+                .catch(err => console.log("Errore SW:", err));
+        }
+    </script>
+</body>
+</html>
